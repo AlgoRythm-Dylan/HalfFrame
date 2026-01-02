@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.ResponseCompression;
+
 namespace HalfFrameWeb
 {
     public class Program
@@ -5,25 +7,31 @@ namespace HalfFrameWeb
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-
-            // Add services to the container.
             builder.Services.AddRazorPages();
+
+            if (!builder.Environment.IsDevelopment())
+            {
+                builder.Services.AddResponseCompression(options =>
+                {
+                    options.EnableForHttps = true;
+                    options.Providers.Add<GzipCompressionProvider>();
+                    options.Providers.Add<BrotliCompressionProvider>();
+                });
+            }
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
+            app.UseRouting();
+            app.UseAuthorization();
             if (!app.Environment.IsDevelopment())
             {
-                app.UseExceptionHandler("/Error");
+                app.UseResponseCompression();
             }
-
-            app.UseRouting();
-
-            app.UseAuthorization();
-
-            app.MapStaticAssets();
-            app.MapRazorPages()
-               .WithStaticAssets();
+            app.UseStaticFiles(new StaticFileOptions()
+            {
+                RequestPath = "/static"
+            });
+            app.MapRazorPages();
 
             app.Run();
         }
